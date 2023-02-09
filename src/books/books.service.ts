@@ -14,16 +14,26 @@ export class BooksService {
   }
 
   // 图书列表
-  async findAll(page: number, limit: number) {
+  async findAll(params: any) {
+    const { name = '', page = 1, limit = 10, category = '' } = params
+    let query = {}
+    if (name) {
+      query = Object.assign(query, { name: { $regex: name } })
+    }
+    if (category) {
+      query = Object.assign(query, { category: { $in: category } })
+    }
+    const skip = (page - 1) * limit
     const promiseArr = [
-      this.bookModel.find().limit(limit).skip((page - 1) * limit),
-      this.bookModel.countDocuments()
+      this.bookModel.find(query).limit(limit).skip(skip).sort({ score: -1 }),
+      this.bookModel.countDocuments(query)
     ]
     const ret = await Promise.all(promiseArr)
     const [books, count] = ret
     return { list: books, count }
   }
 
+  // 书籍详情
   async findOne(id: string) {
     const book = await this.bookModel.findById(id)
     if (!book) {
@@ -32,11 +42,13 @@ export class BooksService {
     return book
   }
 
-  async update(id: number, updateBookDto: UpdateBookDto) {
-    return `This action updates a #${id} book`;
+  // 更新书籍
+  async update(id: string, updateBookDto: UpdateBookDto) {
+    return this.bookModel.findByIdAndUpdate(id, updateBookDto)
   }
 
-  async remove(id: number) {
-    return `This action removes a #${id} book`;
+  // 删除书籍
+  async remove(id: string) {
+    return this.bookModel.deleteOne({ _id: id })
   }
 }
